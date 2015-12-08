@@ -18,7 +18,7 @@
       name : "Board JSON URL",
       description : "Where to search online for board JSON files - these contain links to up to date firmware as well as detailed information about the board's hardware",
       type : "string",
-      defaultValue : "http://www.espruino.com/json"
+      defaultValue : "http://js.amperka.ru/json"
     });
     
     
