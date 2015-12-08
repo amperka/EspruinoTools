@@ -21,7 +21,7 @@
       name : "Save on Send",
       description : "Save the code after sending so that it is executed again as is on board restart",
       type : "boolean",
-      defaultValue : false
+      defaultValue : true
     });    
 
     Espruino.addProcessor("transformForEspruino", function(code, callback) {
