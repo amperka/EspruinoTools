@@ -240,7 +240,7 @@
     });
   };
   
-  var FLASH_OFFSET = 1024*10 /* no bootloader */;
+  var FLASH_OFFSET = 1024*16 /* no bootloader */;
   
   var writeAllData = function(binary, callback) {      
     var chunkSize = 256;
