@@ -26,7 +26,7 @@ Author: Patrick Van Oosterwijck (patrick@silicognition.com)
     Espruino.Core.Config.add("SERIAL_TCPIP", {
       section : "Communications",
       name : "Connect over TCP Address",
-      description : "When connecting, add a menu item to connect to a given TCP/IP address (eg. `192.168.1.2` or `192.168.1.2:23`). Leave blank to disable.",
+      description : "When connecting, add a menu item to connect to a given TCP/IP address (eg. `192.168.1.2` or `192.168.1.2:23`). Leave blank to disable. Separate multiple ip addresses with a semi-colon.",
       type : "string",
       defaultValue : "", 
     });
@@ -38,15 +38,24 @@ Author: Patrick Van Oosterwijck (patrick@silicognition.com)
   var connectionReadCallback;  
 
   var getPorts = function(callback) {
-    if (Espruino.Config.SERIAL_TCPIP.trim() != "")
-      callback(['TCP/IP: ' + Espruino.Config.SERIAL_TCPIP]);
-    else
+    if (Espruino.Config.SERIAL_TCPIP.trim() != "") {      
+      var ips = Espruino.Config.SERIAL_TCPIP.trim().split(";");
+      var portList = [];
+      ips.forEach(function(s) { 
+        s = s.trim();
+        if (s.length) portList.push({path:'TCP/IP: '+s, description:"Network connection"}); 
+      })
+      callback(portList);
+    } else
       callback();
   };
   
   var openSerial=function(serialPort, openCallback, receiveCallback, disconnectCallback) {
-
-    var host = Espruino.Config.SERIAL_TCPIP.trim();
+    if (serialPort.substr(0,8)!='TCP/IP: ') {
+      console.error("Invalid connection "+JSON.stringify(serialPort));
+      return;
+    }
+    var host = serialPort.substr(8);
     var port = 23;
     if (host.indexOf(":") >= 0) {
       var i = host.indexOf(":");
@@ -87,7 +96,7 @@ Author: Patrick Van Oosterwijck (patrick@silicognition.com)
         function () {
           connectionInfo=null;
           connectionDisconnectCallback();
-          connectionDisconnectCallback = undefinedl
+          connectionDisconnectCallback = undefined;
       });
     }
   };

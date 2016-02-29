@@ -47,7 +47,7 @@
    * It'll return {type:"type", str:"chars that were parsed", value:"string", startIdx: Index in string of the start, endIdx: Index in string of the end}, until EOF when it returns undefined */
   function getLexer(str) {
     // Nasty lexer - no comments/etc
-    var chAlpha="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    var chAlpha="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
     var chNum="0123456789";
     var chAlphaNum = chAlpha+chNum;
     var chWhiteSpace=" \t\n\r";
@@ -149,15 +149,20 @@
    * and hope it comes back. Calls callback with first argument true if it
      had to Ctrl-C out */
   function getEspruinoPrompt(callback) {
-    var  receivedData = "";
+    if (Espruino.Core.Terminal!==undefined &&
+        Espruino.Core.Terminal.getTerminalLine()==">") {
+      console.log("Found a prompt... great!");
+      return callback();
+    }
 
+    var  receivedData = "";
     var prevReader = Espruino.Core.Serial.startListening(function (readData) {
       var bufView = new Uint8Array(readData);
       for(var i = 0; i < bufView.length; i++) {
         receivedData += String.fromCharCode(bufView[i]);
       }
       if (receivedData[receivedData.length-1] == ">") {
-        console.log("Found a prompt... good!");
+        console.log("Received a prompt after sending newline... good!");
         clearTimeout(timeout);
         nextStep();         
       }        
@@ -185,10 +190,11 @@
     // send a newline, and we hope we'll see '=undefined\r\n>'
     Espruino.Core.Serial.write('\n');      
   };  
-  
+
   /** Return the value of executing an expression on the board */
   function executeExpression(expressionToExecute, callback) {
-    var  receivedData = "";
+    var receivedData = "";
+    var hadDataSinceTimeout = false;
     
     function getProcessInfo(expressionToExecute, callback) {      
       var prevReader = Espruino.Core.Serial.startListening(function (readData) {
@@ -197,20 +203,23 @@
           receivedData += String.fromCharCode(bufView[i]);
         }
         // check if we got what we wanted
-        var startProcess = receivedData.indexOf("<<<<<");
-        var endProcess = receivedData.indexOf(">>>>>", startProcess);
+        var startProcess = receivedData.indexOf("< <<");
+        var endProcess = receivedData.indexOf(">> >", startProcess);
         if(startProcess >= 0 && endProcess > 0){
           // All good - get the data!
-          var result = receivedData.substring(startProcess + 5,endProcess);       
+          var result = receivedData.substring(startProcess + 4,endProcess);       
           console.log("Got "+JSON.stringify(receivedData)); 
           // strip out the text we found
-          receivedData = receivedData.substr(0,startProcess) + receivedData.substr(endProcess+5);
+          receivedData = receivedData.substr(0,startProcess) + receivedData.substr(endProcess+4);
           // try and strip out the echo 0 too...
-          receivedData = receivedData.replace("echo(0);","");       
+          receivedData = receivedData.replace("echo(0);\r\n\r\n=undefined\r\n>","");       
           // Now stop time timeout
-          clearTimeout(timeout);
+          clearInterval(timeout);
           // Do the next stuff
           nextStep(result);
+        } else if (startProcess >= 0) {
+          // we got some data - so keep waiting...
+          hadDataSinceTimeout = true;
         }
       });
       
@@ -220,34 +229,35 @@
         Espruino.Core.Serial.startListening(prevReader);          
         // forward the original text to the previous reader
         prevReader(receivedData);
-        // do echo(1) here as this will re-show the prompt
-        Espruino.Core.Serial.write('echo(1);\n'); 
         // run the callback
         callback(result);
       };
 
-      // Ensure that we have some chars on input line so that next Ctrl-C
-      // character will clear the line and will not cause interrupt
-      Espruino.Core.Serial.write('O_o'); 
-      // Write main expression after small delay to ensure that 'O_o'
-      // was already read by the board.
-      setTimeout(function() {
-        // string adds to stop the command tag being detected in the output
-        Espruino.Core.Serial.write('\x03echo(0);\nconsole.log("<<"+"<<<"+JSON.stringify('+expressionToExecute+')+">>>"+">>");\n');
-      }, 20);
+      // Don't Ctrl-C, as we've already got ourselves a prompt with Espruino.Core.Utils.getEspruinoPrompt
+      Espruino.Core.Serial.write('echo(0);\nconsole.log("<","<<",JSON.stringify('+expressionToExecute+'),">>",">");echo(1);\n');
 
-      //
-      var timeout = setTimeout(function(){
-        console.warn("No result found - just got "+JSON.stringify(receivedData));          
-        nextStep(undefined);        
-      },1000);   
+      var maxTimeout = 20; // 10 secs
+      var timeoutCnt = 0;
+      var timeout = setInterval(function onTimeout(){
+        timeoutCnt++;
+        // if we're still getting data, keep waiting for up to 10 secs
+        if (hadDataSinceTimeout && timeoutCnt<maxTimeout) {
+          hadDataSinceTimeout = false;
+        } else if (timeoutCnt>2) {
+          // No data in 1 second
+          // OR we keep getting data for > maxTimeout seconds
+          clearInterval(timeout);
+          console.warn("No result found - just got "+JSON.stringify(receivedData));          
+          nextStep(undefined);        
+        }        
+      }, 500);   
     }    
    
     if(Espruino.Core.Serial.isConnected()){
       Espruino.Core.Utils.getEspruinoPrompt(function() {
         getProcessInfo(expressionToExecute, callback);
       });
-    }
+    } else console.error("executeExpression called when not connected!");
   };
   
   function versionToFloat(version) {
@@ -289,6 +299,13 @@
   function isURL(text) {
     return (new RegExp( '(http|https)://' )).test(text);
   }
+
+  /* Are we served from a secure location so we're
+   forced to use a secure get? */
+  function needsHTTPS() {
+    if (!window || !window.location) return false;
+    return window.location.protocol=="https:";
+  }
   
   Espruino.Core.Utils = {
       init : init,
@@ -305,5 +322,6 @@
       markdownToHTML : markdownToHTML,
       getURL : getURL,
       isURL : isURL,
+      needsHTTPS : needsHTTPS
   };
 }());

@@ -28,7 +28,10 @@
       defaultValue : true, 
     });    
     
-    Espruino.addProcessor("connected", queryBoardProcess);
+    Espruino.addProcessor("connected", function(data, callback) {
+      // Give us some time for any stored data to come in
+      setTimeout(queryBoardProcess, 200, data, callback);
+    });
   }
   
   function queryBoardProcess(data, callback) {    
@@ -42,7 +45,7 @@
         try {       
           json = JSON.parse(result);
         } catch (e) {
-          console.log("JSON parse failed - " + e);
+          console.log("JSON parse failed - " + e + " in " + JSON.stringify(result));
         }
       }
       // now process the enviroment variables

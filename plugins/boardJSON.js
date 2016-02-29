@@ -31,8 +31,11 @@
           for (var key in data)
             env[key] = data[key];
           Espruino.callProcessor("boardJSONLoaded", env);
-        }).error(function() { console.warn("Error loading "+jsonPath); })
-          .complete(function() { callback(env); });
+        }).error(function() { 
+          console.warn("Error loading "+jsonPath); 
+        }).complete(function() { 
+          callback(env); 
+        });
       } else
         callback(env);
     }); 

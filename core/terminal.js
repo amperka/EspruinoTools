@@ -104,19 +104,19 @@
         if (e.keyCode == 'C'.charCodeAt(0)) ch = String.fromCharCode(3); // control C
       }
       if (e.altKey) {
-        if (e.keyCode == 13) ch = String.fromCharCode(27)+String.fromCharCode(10); // Alt enter
+        if (e.keyCode == 13) ch = String.fromCharCode(27,10); // Alt enter
       }
       if (e.keyCode == 8) ch = "\x08"; // backspace
       if (e.keyCode == 9) ch = "\x09"; // tab
-      if (e.keyCode == 46) ch = String.fromCharCode(27)+String.fromCharCode(91)+String.fromCharCode(51)+String.fromCharCode(126); // delete
-      if (e.keyCode == 38) ch = String.fromCharCode(27)+String.fromCharCode(91)+String.fromCharCode(65); // up
-      if (e.keyCode == 40) ch = String.fromCharCode(27)+String.fromCharCode(91)+String.fromCharCode(66); // down
-      if (e.keyCode == 39) ch = String.fromCharCode(27)+String.fromCharCode(91)+String.fromCharCode(67); // right
-      if (e.keyCode == 37) ch = String.fromCharCode(27)+String.fromCharCode(91)+String.fromCharCode(68); // left
-      if (e.keyCode == 36) ch = String.fromCharCode(27)+String.fromCharCode(79)+String.fromCharCode(72); // home
-      if (e.keyCode == 35) ch = String.fromCharCode(27)+String.fromCharCode(79)+String.fromCharCode(70); // end
-      if (e.keyCode == 33) ch = String.fromCharCode(27)+String.fromCharCode(91)+String.fromCharCode(53)+String.fromCharCode(126); // page up
-      if (e.keyCode == 34) ch = String.fromCharCode(27)+String.fromCharCode(91)+String.fromCharCode(54)+String.fromCharCode(126); // page down
+      if (e.keyCode == 46) ch = String.fromCharCode(27,91,51,126); // delete
+      if (e.keyCode == 38) ch = String.fromCharCode(27,91,65); // up
+      if (e.keyCode == 40) ch = String.fromCharCode(27,91,66); // down
+      if (e.keyCode == 39) ch = String.fromCharCode(27,91,67); // right
+      if (e.keyCode == 37) ch = String.fromCharCode(27,91,68); // left
+      if (e.keyCode == 36) ch = String.fromCharCode(27,79,72); // home
+      if (e.keyCode == 35) ch = String.fromCharCode(27,79,70); // end
+      if (e.keyCode == 33) ch = String.fromCharCode(27,91,53,126); // page up
+      if (e.keyCode == 34) ch = String.fromCharCode(27,91,54,126); // page down
 
       if (ch!=undefined) {
         e.preventDefault();
@@ -140,7 +140,7 @@
       callback(data);
     });
     Espruino.addProcessor("disconnected", function(data, callback) {
-      outputDataHandler("\r\nDisconnected\r\n>");
+      outputDataHandler("\r\nDisconnected\r\n");
       $("#terminal").removeClass("terminal--connected");
       callback(data);
     });
@@ -150,7 +150,7 @@
     // Get just the last entered line
     var currentLine = Espruino.Core.Terminal.getInputLine();
     if (currentLine==undefined)
-      currentLine = { text : "" };
+      currentLine = { text : "", line : 0 };
     termText = currentLine.text.split("\n");
     // re-add > and : marks
     for (var l in termText)
@@ -217,8 +217,11 @@
             Espruino.Core.Utils.getSubString(line,0,termCursorX)) + 
             "<span class='terminal__cursor'>" + Espruino.Core.Utils.escapeHTML(ch) + "</span>" + 
             Espruino.Core.Utils.escapeHTML(Espruino.Core.Utils.getSubString(line,termCursorX+1));
-      } else
+      } else {
         line = Espruino.Core.Utils.escapeHTML(line);
+        // handle URLs
+        line = line.replace(/(https?:\/\/[-a-zA-Z0-9@:%._\+~#=\/\?]+)/g, '<a href="$1" target="_blank">$1</a>');
+      }
       // extra text is for stuff like tutorials
       if (termExtraText[y])
         line = termExtraText[y] + line;
