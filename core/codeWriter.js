@@ -46,7 +46,8 @@
 
       //console.log("Sending... "+data);
       Espruino.Core.Serial.write(code, true, function() {
-        var count = 20;
+        // give 5 seconds for sending with save and 2 seconds without save
+        var count = Espruino.Config.SAVE_ON_SEND ? 50 : 20;
         setTimeout(function cb() {
           if (Espruino.Core.Terminal!==undefined && 
               Espruino.Core.Terminal.getTerminalLine()!=">") {
