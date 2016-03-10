@@ -12,8 +12,8 @@
 "use strict";
 (function(){
   
-  var JSON_DIR = "http://www.espruino.com/json/";
-  //var JSON_DIR = "http://js.amperka.ru/json/";
+  //var JSON_DIR = "http://www.espruino.com/json/";
+  var JSON_DIR = "http://js.amperka.ru/json/";
   
   var environmentData = {};
   var boardData = {};
